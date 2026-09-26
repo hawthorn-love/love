@@ -903,7 +903,7 @@
     <div id="importToast" class="import-toast"></div>
 
     <script>
-        const storageKey = "chatSimpleData_v13";
+        const storageKey = "chatSimpleData_v14";
         let data = JSON.parse(localStorage.getItem(storageKey)) || {
             chat: [], cards: [], emojis: [],
             taName: "哥哥", myAvatar: "", taAvatar: "",
@@ -1372,7 +1372,6 @@
             $("callButtons").style.display = "none";
             $("callButtonsActive").style.display = "flex";
             startCallTimer();
-            // 对方挂断概率
             const hangupChance = (data.hangupPercent || 0) / 100;
             if (Math.random() < hangupChance) {
                 const hangupDelay = (1 + Math.random() * 3) * 1000;
@@ -1391,12 +1390,11 @@
             $("callWindow").classList.remove('minimized');
             callMinimized = false;
             const duration = callSeconds;
-            // 直接根据 endedBy 决定显示位置
             data.chat.push({
                 type: "call",
                 text: "语音通话",
                 duration: duration,
-                endedBy: endedBy  // 'me' 或 'ta'
+                endedBy: endedBy
             });
             save(); renderChat();
         }
@@ -1419,7 +1417,6 @@
         $("btnRejectCall").onclick = function() {
             if (callDirection === 'incoming') {
                 showToast("已拒接来电");
-                // 未接来电显示在对方那侧
                 data.chat.push({
                     type: "call", text: "未接来电",
                     duration: 0, endedBy: 'ta'
@@ -1562,13 +1559,23 @@
         });
 
         // ========== 聊天（带头像） ==========
-        function createAvatarHTML(avatarSrc) {
+        // 关键：用 createElement 方式创建头像元素，而不是字符串拼接
+        function createAvatarElement(avatarSrc) {
+            const div = document.createElement('div');
+            div.className = 'chat-avatar';
             if (avatarSrc) {
-                return `<div class="chat-avatar"><img src="${avatarSrc}" alt="头像"></div>`;
+                const img = document.createElement('img');
+                img.src = avatarSrc;
+                img.alt = '头像';
+                div.appendChild(img);
             } else {
-                return `<div class="chat-avatar"><i class="fa fa-user"></i></div>`;
+                const i = document.createElement('i');
+                i.className = 'fa fa-user';
+                div.appendChild(i);
             }
+            return div;
         }
+
         function renderChat() {
             chatBox.innerHTML = "";
             data.chat.forEach(item => {
@@ -1584,10 +1591,12 @@
                     inner.textContent = item.text;
                     content.appendChild(inner);
                     row.appendChild(content);
-                    row.innerHTML += createAvatarHTML(data.myAvatar);
+                    // 头像在右侧
+                    row.appendChild(createAvatarElement(data.myAvatar));
                 } else if (item.type === "ta") {
                     row.className = "msg-row ta-row";
-                    row.innerHTML += createAvatarHTML(data.taAvatar);
+                    // 头像在左侧
+                    row.appendChild(createAvatarElement(data.taAvatar));
                     const content = document.createElement('div');
                     content.className = "bubble-content";
                     const inner = document.createElement('div');
@@ -1604,7 +1613,7 @@
                     row.appendChild(content);
                 } else if (item.type === "choice") {
                     row.className = "msg-row ta-row";
-                    row.innerHTML += createAvatarHTML(data.taAvatar);
+                    row.appendChild(createAvatarElement(data.taAvatar));
                     const card = document.createElement('div');
                     card.className = "quiz-card";
                     const q = document.createElement('div');
@@ -1639,7 +1648,6 @@
                     content.appendChild(card);
                     row.appendChild(content);
                 } else if (item.type === "call") {
-                    // 根据 endedBy 决定左右：'me'→右侧，'ta'→左侧
                     const isMe = item.endedBy === 'me';
                     row.className = "msg-row " + (isMe ? "my-row" : "ta-row");
                     const mins = Math.floor((item.duration || 0) / 60);
@@ -1649,7 +1657,6 @@
                     const iconColor = isMissed ? '#ff3b30' : '#28a745';
 
                     if (isMe) {
-                        // 我挂断：右边
                         const content = document.createElement('div');
                         content.className = "bubble-content";
                         const inner = document.createElement('div');
@@ -1666,10 +1673,9 @@
                         inner.appendChild(text);
                         content.appendChild(inner);
                         row.appendChild(content);
-                        row.innerHTML += createAvatarHTML(data.myAvatar);
+                        row.appendChild(createAvatarElement(data.myAvatar));
                     } else {
-                        // 对方挂断 / 未接来电：左边
-                        row.innerHTML += createAvatarHTML(data.taAvatar);
+                        row.appendChild(createAvatarElement(data.taAvatar));
                         const content = document.createElement('div');
                         content.className = "bubble-content";
                         const inner = document.createElement('div');
